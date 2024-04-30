@@ -1,0 +1,175 @@
+--Q1-Q4 - Fix or improve the implementation of the below methods.
+
+--Q1 - Fix or improve the implementation of the below methods
+
+local STORAGE_ID = 1000;
+
+local function releaseStorage(player)
+    
+    player:setStorageValue(STORAGE_ID, -1)
+    
+end
+
+function onLogout(player)
+    
+    if player:getStorageValue(STORAGE_ID) ~= -1 then
+        
+        addEvent(releaseStorage, 1000, player)
+        
+    end
+    turn true
+end
+
+-- KEOLA'S Q1 ASSUMPTIONS:
+-- a) The only storage key needing modification is 1000. -- Why I assumed this: it is the only value provided and checked.
+-- b) The design of this function is to clear the value at storage key 1000 if it has deviated from the default value of -1. (Storage default value outlined in the OTLand API) -- Why I assumed this: The function name is releaseStorage, so I feel it's safe to assume that we need to reset the value back to default if it isn't already.
+-- c) The asynchronous nature of releasing storage with addEvent with a delay param of 1000 isn't a problem and is accounted for in the project's design. In the even that I knew it wasn't, I would have tried to avoid the async call where possible.
+
+-- KEOLA'S Q1 CHANGES
+-- Per assumption a) I made it a local at the top of the script. It's important that values referenced in multiple places come from one consistent, readable, and easily maintainable source. Also, the event delay value was the same, and that could get confusing fast.
+-- Per assumption b) I changed the getStorageValue result check to see if it is not -1 instead of equal to 1.
+
+
+-- ====================================================================================================================================
+
+
+
+--Q2 - Fix or improve the implementation of the below method
+
+function printSmallGuildNames(memberCount)
+    
+-- this method is supposed to print names of all guilds that have less than memberCount max members
+
+    -- I chose to build the query in a more readable and complete fashion
+    local selectGuildQuery = "SELECT `name` FROM `guilds` WHERE `max_members` < " .. memberCount .. ";"
+    local resultId = db.storeQuery(selectGuildQuery)
+    
+    if resultId then
+        repeat
+            print(result.getString(resultId, "name"))
+        until not result.next(selectGuildQuery)
+    else
+        print("Couldn't find any guilds with fewer than " .. memberCount .. " members.");
+    end
+    
+    result.free(selectGuildQuery)
+
+end
+
+
+-- KEOLA'S Q2 CHANGES
+-- We are now checking if a result of the query exists before accessing it.
+-- Previously, the function would print only one result. Now we're iterating over all of the results of the query and printing each one.
+-- Added a print message for when no guilds could be found as a result of query.
+-- Building the entire query string on one line and before the storeQuery call for better readability.
+
+
+-- ====================================================================================================================================
+
+
+--Q3 - Fix or improve the name and the implementation of the below method
+
+function removeMemberFromPlayerParty(playerId, memberName)
+    
+    -- Made this local
+    local player = Player(playerId)
+    
+    local party = player:getParty()
+
+    -- added this as a failsafe, we don't want to continue if they have no party
+    if party == nil then
+        return
+    end
+
+    --changed the k to _ for readability - common convention for when you want to ignore it
+    --changed the v to member for readability
+    for _, member in pairs(party:getMembers()) do
+        
+        -- fixed check for a member name
+        if memberName == member:getName() then
+            
+            -- remove the member correctly now
+            party:removeMember(member)
+            
+        end
+        
+    end
+    
+end
+
+-- KEOLA'S Q3 ASSUMPTIONS:
+-- a) Assuming that the function name should be in camelCase like the other function names so far
+-- b) Assuming that the function parameters should in camelCase like the other function parameters thus far.
+-- c) The playerId belongs to the owner of the party, and the memberName belongs to the party member that needs to be removed
+-- d) No console logging or OT text output was needed since it wasn't present in the original example
+-- e) player variable was supposed to be local only to this function
+-- f) the order in which the members are iterated in does not matter, and therefore pairs is desired over ipairs.
+
+-- KEOLA'S Q3 CHANGES
+-- Per a), I have renamed the function to removeMemberFromPlayerParty
+-- Per b), I have renamed the parameter membername to memberName
+-- Per e), made the player variable a local to keep its scope within this function
+-- Added a failsafe/early return in the case that the player with playerId did not have a party, or for whatever other reason player:getParty() returned nil
+-- Changed the for loop variables from [k, v] to [_, member] for readability's sake, since we only are looking at the table values.
+-- fixed the comparison against the value (member) in the for loop against the provided memberName
+-- fixed the removal of the player from the party by using the player reference we already have
+
+-- ====================================================================================================================================
+
+
+// Q4 - Assume all method calls work fine. Fix the memory leak issue in below method
+
+void Game::addItemToPlayer(const std::string& recipient, uint16_t itemId)
+{
+    Player* player = g_game.getPlayerByName(recipient);
+    
+    // created flag to track if the new keyword was being used.
+    bool usedNew = false;
+    
+    if (!player) 
+    {
+        player = new Player(nullptr);
+        usedNew = true;
+        
+        if (!IOLoginData::loadPlayerByName(player, recipient)) 
+        {
+            // need to delete the player to free memory allocated by new keyword
+            delete player;
+            return;
+        }
+    }
+
+    Item* item = Item::CreateItem(itemId);
+    
+    if (!item) 
+    {
+        // Added check to see if we need to delete a player allocated by new
+        if (usedNew)
+        {
+            delete player;
+        }
+        
+        return;
+    }
+
+    g_game.internalAddItem(player->getInbox(), item, INDEX_WHEREEVER, FLAG_NOLIMIT);
+
+    if (player->isOffline())
+    {
+        IOLoginData::savePlayer(player);
+    }
+    
+    // Added check to see if we need to delete a player allocated by new
+    if (usedNew)
+    {
+        delete player;
+    }
+}
+
+
+// KEOLA'S Q4 ASSUMPTIONS:
+// a) I assumed that the method calls outside of this method were not using new, and therefore assumed I didn't need to worry about handling cases where the new keyword being used in those instances were not cases I needed to handle.
+
+
+// KEOLA'S Q4 CHANGES:
+// Following my comments, I created a boolean to track if the new keyword was being used. I only want to use delete on objects we explicitly created with new, because otherwise, I greatly risk deleting the data that is outside the scope of this method.
