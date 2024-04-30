@@ -1,0 +1,11 @@
+MainWindow
+  id: jumpWindow
+  size: 280 280
+
+  @onEscape: modules.tavernlight_jumpgame.hide()
+
+  Button
+    id: jumpButton
+    width: 60
+    !text: tr('Jump!')
+    @onClick: modules.tavernlight_jumpgame.newButtonPosition()

@@ -1,0 +1,10 @@
+Module
+  name: tavernlight_jumpgame
+  description: Jump button game!
+  author: Keola Silva
+  website:
+  scripts: [ tavernlight_jumpgame ]
+  sandboxed: true
+  autoload: true
+  @onLoad: init()
+  @onUnload: terminate()
